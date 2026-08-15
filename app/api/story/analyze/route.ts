@@ -181,6 +181,11 @@ Rules:
 - Only include characters who are visually present/visible in that specific panel.
 - Include dialogue only in the panel where it is actually spoken. Use an empty
   dialogue array if a panel has no dialogue.
+- When a panel contains dialogue, the image_prompt must visually indicate who is
+  speaking through appropriate body language, facial expression, pose, gesture,
+  and/or mouth position. The visual description should make it clear which
+  character is delivering the dialogue without requiring the dialogue text to be
+  embedded in the image itself.
 - For image_prompt, write a detailed, self-contained prompt describing: composition,
   which characters are present and what they are doing, environment/setting,
   camera angle or shot type (e.g. close-up, wide shot), mood, and lighting.
@@ -221,7 +226,7 @@ ${JSON.stringify(analysis.scenes, null, 2)}
       },
       { status: 200 }
     );
-    
+
   } catch (err) {
     console.error("Gemini analyze/panel-plan error:", err);
     return NextResponse.json(

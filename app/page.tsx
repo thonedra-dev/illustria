@@ -72,6 +72,44 @@ export default function HomePage() {
     }
   };
 
+  // Update a single dialogue line's text for a specific panel, immutably.
+  const updateDialogueLine = (
+    panelId: string,
+    dialogueIndex: number,
+    newLine: string
+  ) => {
+    setResult((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        panels: prev.panels.map((panel) => {
+          if (panel.panel_id !== panelId) return panel;
+          return {
+            ...panel,
+            dialogue: panel.dialogue.map((d, i) =>
+              i === dialogueIndex ? { ...d, line: newLine } : d
+            ),
+          };
+        }),
+      };
+    });
+  };
+
+  // Update a panel's image_prompt, immutably.
+  const updateImagePrompt = (panelId: string, newPrompt: string) => {
+    setResult((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        panels: prev.panels.map((panel) =>
+          panel.panel_id === panelId
+            ? { ...panel, image_prompt: newPrompt }
+            : panel
+        ),
+      };
+    });
+  };
+
   const wordCount = story.trim().length === 0 ? 0 : story.trim().split(/\s+/).length;
 
   // Group panels by their parent scene, in scene order
@@ -125,30 +163,35 @@ export default function HomePage() {
         {/* Results */}
         {result && (
           <div className="mt-8 space-y-8">
-            {/* Title + characters */}
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-              <h2 className="text-2xl font-bold mb-4">{result.analysis.title}</h2>
-
-              <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-2">
-                Characters
-              </h3>
-              <div className="grid sm:grid-cols-2 gap-3">
-                {result.analysis.characters.map((c) => (
-                  <div
-                    key={c.name}
-                    className="bg-slate-950 border border-slate-800 rounded-lg p-3"
-                  >
-                    <p className="font-medium text-indigo-300">{c.name}</p>
-                    <p className="text-xs text-slate-400 mt-1">{c.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Scenes with their panels */}
-            <div>
+            {/* STORY LEVEL — title + characters (read-only) */}
+            <section>
               <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">
-                Scenes &amp; Panels
+                Story
+              </h3>
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                <h2 className="text-2xl font-bold mb-4">{result.analysis.title}</h2>
+
+                <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                  Characters
+                </h4>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  {result.analysis.characters.map((c) => (
+                    <div
+                      key={c.name}
+                      className="bg-slate-950 border border-slate-800 rounded-lg p-3"
+                    >
+                      <p className="font-medium text-indigo-300">{c.name}</p>
+                      <p className="text-xs text-slate-400 mt-1">{c.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* SCENE LEVEL */}
+            <section>
+              <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">
+                Scenes
               </h3>
 
               <div className="space-y-6">
@@ -157,16 +200,23 @@ export default function HomePage() {
                     key={scene.scene_id}
                     className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl"
                   >
-                    <p className="text-xs text-indigo-400 font-mono mb-1">{scene.scene_id}</p>
-                    <p className="text-slate-200 mb-4">{scene.summary}</p>
+                    {/* Scene header (read-only) */}
+                    <div className="mb-4">
+                      <p className="text-xs text-indigo-400 font-mono mb-1">
+                        {scene.scene_id}
+                      </p>
+                      <p className="text-slate-200">{scene.summary}</p>
+                    </div>
 
+                    {/* PANEL LEVEL */}
                     <div className="grid sm:grid-cols-2 gap-4">
                       {panels.map((panel) => (
                         <div
                           key={panel.panel_id}
-                          className="bg-slate-950 border border-slate-800 rounded-xl p-4"
+                          className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col gap-3"
                         >
-                          <div className="flex items-center justify-between mb-2">
+                          {/* Panel meta (read-only) */}
+                          <div className="flex items-center justify-between">
                             <span className="text-xs font-mono text-slate-500">
                               {panel.panel_id}
                             </span>
@@ -177,36 +227,54 @@ export default function HomePage() {
                             )}
                           </div>
 
-                          <p className="text-sm text-slate-200 mb-3">{panel.description}</p>
+                          {/* Panel description (read-only) */}
+                          <p className="text-sm text-slate-200">{panel.description}</p>
 
+                          {/* DIALOGUE (editable) */}
                           {panel.dialogue.length > 0 && (
-                            <div className="mb-3 space-y-1">
+                            <div className="space-y-2">
+                              <h5 className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                                Dialogue
+                              </h5>
                               {panel.dialogue.map((d, i) => (
-                                <p key={i} className="text-xs text-slate-400 italic">
-                                  <span className="text-slate-300 not-italic font-medium">
+                                <div key={i} className="flex items-start gap-2">
+                                  <span className="text-xs text-slate-400 font-medium mt-2 shrink-0">
                                     {d.speaker}:
-                                  </span>{" "}
-                                  "{d.line}"
-                                </p>
+                                  </span>
+                                  <input
+                                    type="text"
+                                    value={d.line}
+                                    onChange={(e) =>
+                                      updateDialogueLine(panel.panel_id, i, e.target.value)
+                                    }
+                                    className="flex-1 text-xs bg-slate-900 border border-slate-800 rounded-md px-2 py-1.5 text-slate-200 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors"
+                                  />
+                                </div>
                               ))}
                             </div>
                           )}
 
-                          <details className="mt-2">
-                            <summary className="text-xs text-indigo-400 cursor-pointer">
-                              Image prompt
-                            </summary>
-                            <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                              {panel.image_prompt}
-                            </p>
-                          </details>
+                          {/* IMAGE PROMPT (editable) */}
+                          <div className="space-y-2">
+                            <h5 className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                              Image Prompt
+                            </h5>
+                            <textarea
+                              value={panel.image_prompt}
+                              onChange={(e) =>
+                                updateImagePrompt(panel.panel_id, e.target.value)
+                              }
+                              rows={4}
+                              className="w-full text-xs leading-relaxed bg-slate-900 border border-slate-800 rounded-md px-2 py-2 text-slate-300 resize-y focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors"
+                            />
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </section>
           </div>
         )}
 

@@ -43,7 +43,7 @@ type Theme = {
   styleString: string;
 };
 
-// Fixed lookup table — theme style text is appended to every generated image's
+
 
 
 const THEMES: Theme[] = [

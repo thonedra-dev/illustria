@@ -103,7 +103,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  //Results view state
+  // Results view state
   const [result, setResult] = useState<ApiResponse | null>(null);
   const [generatingPanelId, setGeneratingPanelId] = useState<string | null>(null);
   const [generatedImages, setGeneratedImages] = useState<Record<string, string>>({});

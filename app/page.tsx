@@ -45,7 +45,7 @@ type Theme = {
 
 // Fixed lookup table — theme style text is appended to every generated image's
 // final prompt client-side. Not written by Gemini, so it stays consistent
-// across every panel and the cover regardless of what Gemini generates.
+
 const THEMES: Theme[] = [
   {
     id: "photo-realistic",

@@ -90,7 +90,7 @@ const THEMES: Theme[] = [
 ];
 
 export default function HomePage() {
-  // Navigation (fake second page) ----------
+  // Navigation (fake second page)
   const [view, setView] = useState<View>("input");
 
   // Input view state 

@@ -93,7 +93,7 @@ export default function HomePage() {
   // ---------- Navigation (fake second page) ----------
   const [view, setView] = useState<View>("input");
 
-  // ---------- Input view state ----------
+  // Input view state 
   const [story, setStory] = useState("");
   const [environment, setEnvironment] = useState("");
   const [selectedThemeId, setSelectedThemeId] = useState<string>(THEMES[0].id);

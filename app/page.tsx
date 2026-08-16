@@ -44,8 +44,6 @@ type Theme = {
 };
 
 
-
-
 const THEMES: Theme[] = [
   {
     id: "photo-realistic",

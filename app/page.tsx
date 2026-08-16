@@ -44,6 +44,11 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<ApiResponse | null>(null);
 
+  // --- Image generation state (per-panel) ---
+  const [generatingPanelId, setGeneratingPanelId] = useState<string | null>(null);
+  const [generatedImages, setGeneratedImages] = useState<Record<string, string>>({});
+  const [imageErrors, setImageErrors] = useState<Record<string, string>>({});
+
   const handleSubmit = async () => {
     if (!story.trim()) return;
 
@@ -108,6 +113,37 @@ export default function HomePage() {
         ),
       };
     });
+  };
+
+  // page.tsx -> POST /api/image/generate -> Stability AI -> image -> page.tsx
+  const handleGenerateImage = async (panelId: string, prompt: string) => {
+    if (!prompt.trim()) return;
+
+    setGeneratingPanelId(panelId);
+    setImageErrors((prev) => ({ ...prev, [panelId]: "" }));
+
+    try {
+      const res = await fetch("/api/image/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Image generation failed.");
+      }
+
+      setGeneratedImages((prev) => ({ ...prev, [panelId]: data.image }));
+    } catch (err: any) {
+      setImageErrors((prev) => ({
+        ...prev,
+        [panelId]: err.message || "Failed to generate image.",
+      }));
+    } finally {
+      setGeneratingPanelId(null);
+    }
   };
 
   const wordCount = story.trim().length === 0 ? 0 : story.trim().split(/\s+/).length;
@@ -210,66 +246,97 @@ export default function HomePage() {
 
                     {/* PANEL LEVEL */}
                     <div className="grid sm:grid-cols-2 gap-4">
-                      {panels.map((panel) => (
-                        <div
-                          key={panel.panel_id}
-                          className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col gap-3"
-                        >
-                          {/* Panel meta (read-only) */}
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-mono text-slate-500">
-                              {panel.panel_id}
-                            </span>
-                            {panel.characters.length > 0 && (
-                              <span className="text-xs text-slate-400">
-                                {panel.characters.join(", ")}
+                      {panels.map((panel) => {
+                        const isGenerating = generatingPanelId === panel.panel_id;
+                        const generatedImage = generatedImages[panel.panel_id];
+                        const imageError = imageErrors[panel.panel_id];
+
+                        return (
+                          <div
+                            key={panel.panel_id}
+                            className="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col gap-3"
+                          >
+                            {/* Panel meta (read-only) */}
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-mono text-slate-500">
+                                {panel.panel_id}
                               </span>
+                              {panel.characters.length > 0 && (
+                                <span className="text-xs text-slate-400">
+                                  {panel.characters.join(", ")}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Panel description (read-only) */}
+                            <p className="text-sm text-slate-200">{panel.description}</p>
+
+                            {/* DIALOGUE (editable) */}
+                            {panel.dialogue.length > 0 && (
+                              <div className="space-y-2">
+                                <h5 className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                                  Dialogue
+                                </h5>
+                                {panel.dialogue.map((d, i) => (
+                                  <div key={i} className="flex items-start gap-2">
+                                    <span className="text-xs text-slate-400 font-medium mt-2 shrink-0">
+                                      {d.speaker}:
+                                    </span>
+                                    <input
+                                      type="text"
+                                      value={d.line}
+                                      onChange={(e) =>
+                                        updateDialogueLine(panel.panel_id, i, e.target.value)
+                                      }
+                                      className="flex-1 text-xs bg-slate-900 border border-slate-800 rounded-md px-2 py-1.5 text-slate-200 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
                             )}
-                          </div>
 
-                          {/* Panel description (read-only) */}
-                          <p className="text-sm text-slate-200">{panel.description}</p>
-
-                          {/* DIALOGUE (editable) */}
-                          {panel.dialogue.length > 0 && (
+                            {/* IMAGE PROMPT (editable) */}
                             <div className="space-y-2">
                               <h5 className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
-                                Dialogue
+                                Image Prompt
                               </h5>
-                              {panel.dialogue.map((d, i) => (
-                                <div key={i} className="flex items-start gap-2">
-                                  <span className="text-xs text-slate-400 font-medium mt-2 shrink-0">
-                                    {d.speaker}:
-                                  </span>
-                                  <input
-                                    type="text"
-                                    value={d.line}
-                                    onChange={(e) =>
-                                      updateDialogueLine(panel.panel_id, i, e.target.value)
-                                    }
-                                    className="flex-1 text-xs bg-slate-900 border border-slate-800 rounded-md px-2 py-1.5 text-slate-200 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors"
-                                  />
-                                </div>
-                              ))}
+                              <textarea
+                                value={panel.image_prompt}
+                                onChange={(e) =>
+                                  updateImagePrompt(panel.panel_id, e.target.value)
+                                }
+                                rows={4}
+                                className="w-full text-xs leading-relaxed bg-slate-900 border border-slate-800 rounded-md px-2 py-2 text-slate-300 resize-y focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors"
+                              />
                             </div>
-                          )}
 
-                          {/* IMAGE PROMPT (editable) */}
-                          <div className="space-y-2">
-                            <h5 className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
-                              Image Prompt
-                            </h5>
-                            <textarea
-                              value={panel.image_prompt}
-                              onChange={(e) =>
-                                updateImagePrompt(panel.panel_id, e.target.value)
-                              }
-                              rows={4}
-                              className="w-full text-xs leading-relaxed bg-slate-900 border border-slate-800 rounded-md px-2 py-2 text-slate-300 resize-y focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-colors"
-                            />
+                            {/* IMAGE GENERATION (test) */}
+                            <div className="space-y-2">
+                              <button
+                                onClick={() =>
+                                  handleGenerateImage(panel.panel_id, panel.image_prompt)
+                                }
+                                disabled={isGenerating || !panel.image_prompt.trim()}
+                                className="px-3 py-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed text-xs font-medium transition-colors"
+                              >
+                                {isGenerating ? "Generating..." : "Generate Image (test)"}
+                              </button>
+
+                              {imageError && (
+                                <p className="text-xs text-red-400">{imageError}</p>
+                              )}
+
+                              {generatedImage && (
+                                <img
+                                  src={generatedImage}
+                                  alt={`Generated art for ${panel.panel_id}`}
+                                  className="rounded-lg border border-slate-800 w-full"
+                                />
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ))}

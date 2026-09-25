@@ -97,6 +97,37 @@ const panelPlanSchema = {
   required: ["panels"],
 };
 
+// Models to try, in order. Edit this list to match what's available in your AI Studio.
+const MODEL_FALLBACKS = [
+  "gemini-3.5-flash",
+  "gemini-3.6-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-3.5-flash-lite",
+  "gemini-3.8-flash",
+  "gemini-3.7-flash",
+];
+
+type GenParams = Parameters<GoogleGenAI["models"]["generateContent"]>[0];
+
+async function generateWithFallback(ai: GoogleGenAI, params: Omit<GenParams, "model">) {
+  let lastError: unknown;
+
+  for (const model of MODEL_FALLBACKS) {
+    try {
+      return await ai.models.generateContent({ ...params, model });
+    } catch (err) {
+      lastError = err;
+      const status = (err as { status?: number })?.status;
+      if (status === 404 || status === 503 || status === 429) {
+        console.warn(`${model} failed (${status}), trying next model`);
+        continue; // next model, no waiting, no second try
+      }
+      throw err; // a real error, don't hide it
+    }
+  }
+  throw lastError;
+}
+
 export async function POST(req: NextRequest) {
   try {
     if (!apiKey) {
@@ -145,14 +176,13 @@ ${story}
 """
 `;
 
-    const analysisResult = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: analysisPrompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: analysisSchema,
-      },
-    });
+    const analysisResult = await generateWithFallback(ai, {
+  contents: analysisPrompt,
+  config: {
+    responseMimeType: "application/json",
+    responseSchema: analysisSchema,
+  },
+});
 
     const analysisText = analysisResult.text;
     if (!analysisText) {
@@ -199,14 +229,13 @@ Scenes:
 ${JSON.stringify(analysis.scenes, null, 2)}
 `;
 
-    const panelResult = await ai.models.generateContent({
-      model: "gemini-3.6-flash",
-      contents: panelPrompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: panelPlanSchema,
-      },
-    });
+    const panelResult = await generateWithFallback(ai, {
+  contents: panelPrompt,
+  config: {
+    responseMimeType: "application/json",
+    responseSchema: panelPlanSchema,
+  },
+});
 
     const panelText = panelResult.text;
     if (!panelText) {
@@ -226,11 +255,20 @@ ${JSON.stringify(analysis.scenes, null, 2)}
       },
       { status: 200 }
     );
+
   } catch (err) {
     console.error("Gemini analyze/panel-plan error:", err);
+    const status = (err as { status?: number })?.status;
+    if (status === 503 || status === 429) {
+      return NextResponse.json(
+        { error: "Our Models APIs are currently unavailable. Please try again in a minute." },
+        { status: 503 }
+      );
+    }
     return NextResponse.json(
       { error: "Failed to analyze story." },
       { status: 500 }
     );
   }
+
 }

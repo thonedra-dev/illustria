@@ -3,6 +3,8 @@ import { Client } from "@gradio/client";
 
 const hfToken = process.env.HF_TOKEN;
 
+
+
 const SPACE_ID = "yanze/PuLID-FLUX";
 
 export async function POST(req: NextRequest) {

@@ -1,34 +1,44 @@
 import { NarrationColorId, NarrationFontId, NARRATION_COLORS, NARRATION_FONTS } from "@/lib/narrationStyles";
+import { getNarrationTreatment } from "@/lib/narrationThemeTreatments";
 
 export function NarrationStyleControls({
   colorId,
   fontId,
+  themeId,
   onColorChange,
   onFontChange,
 }: {
   colorId: NarrationColorId;
   fontId: NarrationFontId;
+  themeId?: string;
   onColorChange: (id: NarrationColorId) => void;
   onFontChange: (id: NarrationFontId) => void;
 }) {
   return (
     <div className="flex flex-wrap items-center gap-4">
-      {/* Color swatches */}
+      {/* Color swatches — each preview reflects how this color renders in
+          the currently selected comic theme, not just the flat base tone. */}
       <div className="flex items-center gap-1.5">
-        {NARRATION_COLORS.map((color) => (
-          <button
-            key={color.id}
-            type="button"
-            title={color.label}
-            onClick={() => onColorChange(color.id)}
-            className={`w-6 h-6 rounded-full border-2 transition-transform ${
-              colorId === color.id
-                ? "border-indigo-400 scale-110"
-                : "border-slate-700 hover:scale-105"
-            }`}
-            style={{ background: color.background }}
-          />
-        ))}
+        {NARRATION_COLORS.map((color) => {
+          const treatment = getNarrationTreatment(color, themeId);
+          return (
+            <button
+              key={color.id}
+              type="button"
+              title={color.label}
+              onClick={() => onColorChange(color.id)}
+              className={`w-6 h-6 rounded-full border-2 transition-transform ${
+                colorId === color.id
+                  ? "border-indigo-400 scale-110"
+                  : "border-slate-700 hover:scale-105"
+              }`}
+              style={{
+                background: treatment.background,
+                boxShadow: colorId === color.id ? treatment.boxShadow : undefined,
+              }}
+            />
+          );
+        })}
       </div>
 
       {/* Font picker */}

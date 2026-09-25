@@ -8,6 +8,11 @@ import {
   getNarrationColor,
   getNarrationFont,
 } from "@/lib/narrationStyles";
+import {
+  getNarrationTreatment,
+  getOverlayBackgroundImage,
+  getOverlayBackgroundSize,
+} from "@/lib/narrationThemeTreatments";
 
 function Panel({ src, className = "" }: { src: string; className?: string }) {
   return (
@@ -19,10 +24,14 @@ function Panel({ src, className = "" }: { src: string; className?: string }) {
   );
 }
 
-// The narration box itself: colored background + centered, editable text,
-// with a fixed inner margin on all sides.
+// The narration box itself: theme-adjusted colored background + centered,
+// editable text, with a fixed inner margin on all sides. The same 6 base
+// colors render differently depending on the active comic theme (e.g. the
+// "parchment" yellow reads as ink-on-paper in Western Comic but as a
+// darkened neon HUD panel in Cyberpunk).
 function NarrationSurface({
   content,
+  themeId,
   onTextChange,
   charLimit,
   maxLines,
@@ -30,6 +39,7 @@ function NarrationSurface({
   minHeightClass = "",
 }: {
   content: NarrationContent;
+  themeId: string | undefined;
   onTextChange: (text: string) => void;
   charLimit: number;
   maxLines?: number;
@@ -38,6 +48,8 @@ function NarrationSurface({
 }) {
   const color = getNarrationColor(content.colorId);
   const font = getNarrationFont(content.fontId);
+  const treatment = getNarrationTreatment(color, themeId);
+  const overlayImage = getOverlayBackgroundImage(treatment.overlay);
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     let value = e.target.value;
@@ -58,20 +70,39 @@ function NarrationSurface({
 
   return (
     <div
-      className={`relative border-2 border-black flex items-center justify-center ${minHeightClass} ${className}`}
-      style={{ background: color.background }}
+      className={`relative flex items-center justify-center overflow-hidden ${minHeightClass} ${className}`}
+      style={{
+        background: treatment.background,
+        borderColor: treatment.borderColor,
+        borderWidth: treatment.borderWidth,
+        borderStyle: "solid",
+        boxShadow: treatment.boxShadow,
+      }}
     >
+      {overlayImage && (
+        <div
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: overlayImage,
+            backgroundSize: getOverlayBackgroundSize(treatment.overlay),
+            opacity: treatment.overlayOpacity,
+            mixBlendMode: treatment.overlay === "scanline" ? "overlay" : "multiply",
+          }}
+        />
+      )}
       <textarea
         value={content.text}
         onChange={handleChange}
         placeholder="Narration..."
         maxLength={charLimit}
         rows={maxLines ?? 1}
-        className="w-full h-full resize-none bg-transparent border-none outline-none text-center px-6 py-4 sm:px-10 sm:py-5 placeholder:opacity-40"
+        className="relative w-full h-full resize-none bg-transparent border-none outline-none text-center px-6 py-4 sm:px-10 sm:py-5 placeholder:opacity-40"
         style={{
-          color: color.textColor,
+          color: treatment.textColor,
           fontFamily: font.cssVar,
           lineHeight: 1.3,
+          textShadow: treatment.extraTextShadow,
         }}
       />
     </div>
@@ -82,11 +113,13 @@ export function ComicPage({
   images,
   narration,
   content,
+  themeId,
   onTextChange,
 }: {
   images: string[];
   narration: NarrationSpace;
   content: NarrationContent;
+  themeId?: string;
   onTextChange: (text: string) => void;
 }) {
   const isSinglePanel = images.length === 1;
@@ -96,6 +129,7 @@ export function ComicPage({
     const surface = (
       <NarrationSurface
         content={content}
+        themeId={themeId}
         onTextChange={onTextChange}
         charLimit={SINGLE_PANEL_CHAR_LIMIT}
         className={`flex-1 min-w-0 aspect-square ${
@@ -142,6 +176,7 @@ export function ComicPage({
   const strip = (edge: "top" | "bottom") => (
     <NarrationSurface
       content={content}
+      themeId={themeId}
       onTextChange={onTextChange}
       charLimit={STRIP_CHAR_LIMIT}
       maxLines={STRIP_MAX_LINES}

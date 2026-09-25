@@ -11,6 +11,7 @@ export function SceneCard({
   generatedImages,
   imageErrors,
   themeLabel,
+  themeId,
   isMerged,
   narrationSpace,
   narrationContent,
@@ -29,6 +30,7 @@ export function SceneCard({
   generatedImages: Record<string, string>;
   imageErrors: Record<string, string>;
   themeLabel: string;
+  themeId: string;
   isMerged: boolean;
   narrationSpace: NarrationSpace | undefined;
   narrationContent: NarrationContent;
@@ -166,6 +168,7 @@ export function SceneCard({
           <NarrationStyleControls
             colorId={narrationContent.colorId}
             fontId={narrationContent.fontId}
+            themeId={themeId}
             onColorChange={onNarrationColorChange}
             onFontChange={onNarrationFontChange}
           />
@@ -176,6 +179,7 @@ export function SceneCard({
             images={panels.map((p) => generatedImages[p.panel_id])}
             narration={resolvedNarration}
             content={narrationContent}
+            themeId={themeId}
             onTextChange={onNarrationTextChange}
           />
         )}

@@ -278,6 +278,7 @@ export default function HomePage() {
     <ResultsView
       result={result}
       themeLabel={selectedTheme.label}
+      themeId={selectedTheme.id}
       referenceImage={referenceImage}
       isGeneratingCover={isGeneratingCover}
       coverImage={coverImage}

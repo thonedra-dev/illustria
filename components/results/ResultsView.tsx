@@ -7,6 +7,7 @@ import { SceneCard } from "./SceneCard";
 export function ResultsView({
   result,
   themeLabel,
+  themeId,
   referenceImage,
   isGeneratingCover,
   coverImage,
@@ -30,6 +31,7 @@ export function ResultsView({
 }: {
   result: ApiResponse;
   themeLabel: string;
+  themeId: string;
   referenceImage: string | null;
   isGeneratingCover: boolean;
   coverImage: string | null;
@@ -119,6 +121,7 @@ export function ResultsView({
                   generatedImages={generatedImages}
                   imageErrors={imageErrors}
                   themeLabel={themeLabel}
+                  themeId={themeId}
                   isMerged={!!mergedScenes[scene.scene_id]}
                   narrationSpace={narrationSpace[scene.scene_id]}
                   narrationContent={narrationContent[scene.scene_id] ?? defaultContent}
